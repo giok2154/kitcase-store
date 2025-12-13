@@ -1,11 +1,15 @@
+import HomeHero from "@/components/HomeHero";
+import HomeKits from "@/components/HomeKits";
+import HomeBestSeller from "@/components/HomeBestSeller";
+import HomeProducts from "@/components/HomeProducts";
+
 export default function HomePage() {
   return (
-    <main className="p-8">
-      <h1 className="text-3xl font-semibold">KitCase</h1>
-      <p className="mt-2 text-gray-600">
-        Home funcionando correctamente.
-      </p>
+    <main className="mx-auto max-w-6xl px-6">
+      <HomeHero />
+      <HomeKits />
+      <HomeBestSeller />
+      <HomeProducts />
     </main>
   );
 }
-
