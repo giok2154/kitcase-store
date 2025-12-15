@@ -1,4 +1,5 @@
 import { caseImages } from "@/data/caseImages";
+import { caseBadges } from "@/data/caseBadges";
 
 export default function ProductPreview({ selection }) {
   const caseType = selection["case-type"];
@@ -8,11 +9,13 @@ export default function ProductPreview({ selection }) {
   let description =
     "Elige el tipo y modelo de funda para ver la vista previa.";
   let image = "/placeholder-case.png";
+  let badges = null;
 
   if (caseType && caseModel) {
     title = caseModel;
     description = `${caseType} compatible con tu iPhone`;
     image = caseImages[caseModel] || image;
+    badges = caseBadges[caseModel];
   }
 
   return (
@@ -21,10 +24,10 @@ export default function ProductPreview({ selection }) {
       {/* Imagen */}
       <div className="relative w-full flex justify-center mb-6">
         <img
-          key={image} // fuerza animación al cambiar
+          key={image}
           src={image}
           alt={title}
-          className="w-64 max-w-full transition-all duration-300 ease-out scale-100"
+          className="w-64 max-w-full transition-all duration-300 ease-out"
         />
       </div>
 
@@ -34,16 +37,28 @@ export default function ProductPreview({ selection }) {
         <p className="text-sm text-gray-600">{description}</p>
       </div>
 
-      {/* Badges */}
-      <div className="flex gap-2 mt-4">
-        <span className="text-xs px-3 py-1 bg-white border rounded-full">
-          Incluido en el kit
-        </span>
-        <span className="text-xs px-3 py-1 bg-white border rounded-full">
-          Protección total
-        </span>
-      </div>
+      {/* Badges inteligentes */}
+      {badges && (
+        <div className="flex flex-wrap justify-center gap-2 mt-4">
+          {badges.bestseller && (
+            <span className="text-xs px-3 py-1 bg-black text-white rounded-full">
+              Más vendido
+            </span>
+          )}
 
+          {badges.included && (
+            <span className="text-xs px-3 py-1 bg-white border rounded-full">
+              Incluido en el kit
+            </span>
+          )}
+
+          {badges.savings && (
+            <span className="text-xs px-3 py-1 bg-white border rounded-full">
+              Ahorra {badges.savings} €
+            </span>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

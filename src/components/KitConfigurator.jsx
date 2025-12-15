@@ -1,181 +1,174 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import StepSelect from "./StepSelect";
 import StepMultiSelect from "./StepMultiSelect";
-import { useCart } from "@/hooks/useCart";
 import ProductPreview from "./ProductPreview";
-import CaseModelGrid from "./CaseModelGrid";
+import StickyCTA from "./StickyCTA";
+import { useCart } from "@/hooks/useCart";
 
-
-/* ===============================
-   PRECIO DEL KIT
-================================ */
-function calculateKitPrice(kit, selection) {
-  let price = kit.basePrice;
-
-  kit.steps.forEach((step) => {
-    const selected = selection[step.id];
-    if (!selected) return;
-
-    if (step.type === "select") {
-  const options = getOptions(step, selection);
-
-  // CASO ESPECIAL: modelo de funda con grid visual
-  if (step.id === "case-model") {
-  return (
-    <div className="border-4 border-red-500 p-4">
-      <p>DEBUG: AQUÍ DEBERÍA ESTAR LA GRID VISUAL</p>
-
-      <CaseModelGrid
-        caseType={selection["case-type"]}
-        options={options}
-        value={selection[step.id]}
-        onSelect={(value) =>
-          updateSelection(step.id, value)
-        }
-      />
-    </div>
-  );
-}
-
-
-  // SELECT NORMAL
-  return (
-    <StepSelect
-      key={step.id}
-      step={{ ...step, options }}
-      value={selection[step.id]}
-      onChange={(value) =>
-        updateSelection(step.id, value)
-      }
-      disabled={
-        step.dependsOn &&
-        !selection[step.dependsOn]
-      }
-    />
-  );
-}
-
-
-    if (step.type === "multi-select") {
-      selected.forEach((label) => {
-        const option = step.options.find(
-          (opt) => opt.label === label
-        );
-
-        if (option?.priceModifier) {
-          price += option.priceModifier;
-        }
-      });
-    }
-  });
-
-  return price;
-}
-
-/* ===============================
-   OBTENER OPCIONES DEPENDIENTES
-================================ */
-function getOptions(step, selection) {
-  if (!step.dependsOn) return step.options;
-  const parentValue = selection[step.dependsOn];
-  if (!parentValue) return [];
-  return step.optionsByParent?.[parentValue] || [];
-}
-
-/* ===============================
-   COMPONENTE PRINCIPAL
-================================ */
 export default function KitConfigurator({ kit }) {
   const [selection, setSelection] = useState({});
   const { addItem } = useCart();
 
-  const price = useMemo(
-    () => calculateKitPrice(kit, selection),
-    [kit, selection]
-  );
-
-  function updateSelection(stepId, value) {
+  // ===============================
+  // ACTUALIZAR SELECCIÓN
+  // ===============================
+  const updateSelection = (stepId, value) => {
     setSelection((prev) => ({
       ...prev,
       [stepId]: value,
     }));
-  }
 
-  function handleAddToCart() {
+    // Scroll inteligente en móvil
+    if (stepId === "case-model" && window.innerWidth < 768) {
+      setTimeout(() => {
+        document
+          .getElementById("kit-cta")
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 200);
+    }
+  };
+
+  // ===============================
+  // PRECIO TOTAL (ÚNICA FUENTE)
+  // ===============================
+  const extrasTotal = (selection["extras"] || []).reduce(
+    (sum, item) => sum + (item.priceModifier || 0),
+    0
+  );
+
+  const totalPrice = kit.basePrice + extrasTotal;
+
+  // ===============================
+  // READY STATE
+  // ===============================
+  const isReady =
+    selection["iphone-model"] &&
+    selection["case-type"] &&
+    selection["case-model"];
+
+  // ===============================
+  // AÑADIR AL CARRITO
+  // ===============================
+  const handleAddToCart = () => {
     addItem({
-      id: kit.slug,
+      kitSlug: kit.slug,
       name: kit.name,
-      price,
       selection,
-      quantity: 1,
+      price: totalPrice,
+    });
+  };
+
+  async function handleCheckout() {
+    const response = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: [
+          {
+            name: kit.name,
+            price: totalPrice,
+          },
+        ],
+      }),
     });
 
-    alert("Producto añadido al carrito");
+    const data = await response.json();
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert("Error iniciando el pago");
+    }
   }
+  const isComplete =
+  Boolean(selection["iphone-model"]) &&
+  Boolean(selection["case-model"]);
+
+
 
   return (
-  <section className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
-    {/* CONFIGURADOR */}
-    <div className="space-y-8">
-      {kit.steps.map((step) => {
-        if (step.type === "select") {
-          const options = getOptions(step, selection);
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
+      {/* CONFIGURADOR */}
+      <section className="space-y-6">
+        {kit.steps.map((step) => {
+          const value = selection[step.id];
 
-          return (
-            <StepSelect
-              key={step.id}
-              step={{ ...step, options }}
-              value={selection[step.id]}
-              onChange={(value) =>
-                updateSelection(step.id, value)
-              }
-              disabled={
-                step.dependsOn &&
-                !selection[step.dependsOn]
-              }
-            />
-          );
-        }
+          if (step.type === "select") {
+            let options = step.options || [];
 
-        if (step.type === "multi-select") {
-          return (
-            <StepMultiSelect
-              key={step.id}
-              step={step}
-              value={selection[step.id] || []}
-              onChange={(value) =>
-                updateSelection(step.id, value)
-              }
-            />
-          );
-        }
+            if (step.dependsOn) {
+              const parentValue = selection[step.dependsOn];
+              options = step.optionsByParent?.[parentValue] || [];
+            }
 
-        return null;
-      })}
+            return (
+              <StepSelect
+                key={step.id}
+                label={step.title}
+                value={value}
+                options={options}
+                disabled={step.dependsOn && !selection[step.dependsOn]}
+                onChange={(val) =>
+                  updateSelection(step.id, val)
+                }
+              />
+            );
+          }
 
-      {/* PRECIO */}
-      <div className="border-t pt-6">
-        <p className="text-sm text-gray-500">Precio total</p>
-        <p className="text-3xl font-semibold">
-          {price.toFixed(2)} €
+          if (step.type === "multi-select") {
+            return (
+              <StepMultiSelect
+                key={step.id}
+                label={step.title}
+                value={value || []}
+                options={step.options}
+                onChange={(val) =>
+                  updateSelection(step.id, val)
+                }
+              />
+            );
+          }
+
+          return null;
+        })}
+
+        {/* PRECIO */}
+        <div className="border-t pt-4">
+          <p className="text-sm text-gray-500">
+            Precio total
+          </p>
+          <p className="text-2xl font-semibold">
+            {totalPrice.toFixed(2)} €
+          </p>
+        </div>
+
+        {/* CTA DESKTOP */}
+        <button
+          onClick={handleCheckout}
+          disabled={!isComplete}
+          className="w-full rounded-xl bg-black py-4 text-white disabled:opacity-40"
+        >
+          Añadir al carrito
+        </button>
+
+
+        {/* MICROCOPY */}
+        <p className="text-xs text-gray-500 text-center">
+          Envío rápido · Garantía de calidad · Devolución fácil
         </p>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <button
-        onClick={handleAddToCart}
-        className="w-full rounded-md bg-black px-6 py-3 text-white text-sm"
-      >
-        Añadir al carrito
-      </button>
+      {/* PREVIEW */}
+      <ProductPreview selection={selection} />
+
+      {/* CTA STICKY MÓVIL */}
+      <StickyCTA
+        price={totalPrice}
+        isReady={isReady}
+        onAddToCart={handleAddToCart}
+      />
     </div>
-
-    {/* PREVIEW VISUAL */}
-    <ProductPreview selection={selection} />
-  </section>
-);
-
-  
+  );
 }

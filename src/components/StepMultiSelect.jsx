@@ -1,38 +1,45 @@
 export default function StepMultiSelect({
-  step,
-  value,
+  label,
+  value = [],
+  options = [],
   onChange,
 }) {
-  function toggle(optionLabel) {
-    if (value.includes(optionLabel)) {
-      onChange(value.filter((v) => v !== optionLabel));
+  const toggleOption = (option) => {
+    const exists = value.find((v) => v.label === option.label);
+
+    if (exists) {
+      onChange(value.filter((v) => v.label !== option.label));
     } else {
-      onChange([...value, optionLabel]);
+      onChange([...value, option]);
     }
-  }
+  };
 
   return (
-    <div className="border p-4 rounded">
-      <h3 className="font-medium mb-2">{step.title}</h3>
+    <div className="border rounded p-4 transition border-gray-300">
+      <p className="font-medium mb-3">{label}</p>
 
       <div className="space-y-2">
-        {step.options.map((option) => {
-          const label =
-            typeof option === "string"
-              ? option
-              : option.label;
+        {options.map((option) => {
+          const checked = value.some(
+            (v) => v.label === option.label
+          );
 
           return (
             <label
-              key={label}
-              className="flex items-center gap-2 text-sm"
+              key={option.label}
+              className="flex items-center gap-2 text-sm cursor-pointer"
             >
               <input
                 type="checkbox"
-                checked={value.includes(label)}
-                onChange={() => toggle(label)}
+                checked={checked}
+                onChange={() => toggleOption(option)}
               />
-              {label}
+              <span>
+                {option.label}
+                {option.priceModifier
+                  ? ` (+${option.priceModifier} €)`
+                  : ""}
+              </span>
             </label>
           );
         })}
