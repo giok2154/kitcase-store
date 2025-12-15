@@ -1,4 +1,5 @@
 import { kits } from "../../../data/kits";
+import KitConfigurator from "@/components/KitConfigurator";
 
 export default async function KitConfiguratorPage({ params }) {
   const { slug } = await params;
@@ -21,16 +22,7 @@ export default async function KitConfiguratorPage({ params }) {
       <h1 className="text-3xl font-semibold">{kit.name}</h1>
       <p className="mt-2 text-gray-600">{kit.description}</p>
 
-      <section className="mt-10 space-y-6">
-        {kit.steps.map((step) => (
-          <div key={step.id} className="border p-4 rounded">
-            <h3 className="font-medium">{step.title}</h3>
-            <p className="text-sm text-gray-500">
-              Tipo: {step.type}
-            </p>
-          </div>
-        ))}
-      </section>
+      <KitConfigurator kit={kit} />
     </main>
   );
 }
