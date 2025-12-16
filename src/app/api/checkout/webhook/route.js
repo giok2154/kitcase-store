@@ -44,27 +44,49 @@ export async function POST(req) {
 
       // 5️⃣ Email cliente
       if (email) {
+        // 📧 Email al cliente
         await resend.emails.send({
           from: "KitCase <onboarding@resend.dev>",
           to: email,
           subject: "✅ Pedido confirmado – KitCase",
           html: `
-            <h2>Gracias por tu compra 🎉</h2>
-            <p>Hemos recibido correctamente tu pedido.</p>
+      <h2>Gracias por tu compra 🎉</h2>
+      <p>Hemos recibido correctamente tu pedido.</p>
 
-            <ul>
-              <li><strong>Pedido:</strong> ${stripeSessionId}</li>
-              <li><strong>Importe:</strong> €${amount}</li>
-              <li><strong>Email:</strong> ${email}</li>
-            </ul>
+      <ul>
+        <li><strong>Pedido:</strong> ${stripeSessionId}</li>
+        <li><strong>Importe:</strong> €${amount}</li>
+        <li><strong>Email:</strong> ${email}</li>
+      </ul>
 
-            <p>En breve comenzaremos la preparación de tu pedido.</p>
-            <p>— <strong>KitCase</strong></p>
-          `,
+      <p>En breve comenzaremos la preparación de tu pedido.</p>
+      <p>— <strong>KitCase</strong></p>
+    `,
         });
 
-        console.log("📧 Email enviado correctamente");
+        console.log("📧 Email cliente enviado correctamente");
+
+        // 📧 Email interno (admin)
+        await resend.emails.send({
+          from: "KitCase <onboarding@resend.dev>",
+          to: "pedidos@kitcase.com", // o tu email personal por ahora
+          subject: "🛒 Nuevo pedido recibido – KitCase",
+          html: `
+      <h2>Nuevo pedido recibido</h2>
+
+      <ul>
+        <li><strong>Pedido:</strong> ${stripeSessionId}</li>
+        <li><strong>Email cliente:</strong> ${email}</li>
+        <li><strong>Importe:</strong> €${amount}</li>
+      </ul>
+
+      <p>Accede al panel para preparar el pedido.</p>
+    `,
+        });
+
+        console.log("📧 Email admin enviado correctamente");
       }
+
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });
