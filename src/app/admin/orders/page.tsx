@@ -1,17 +1,11 @@
 // @ts-nocheck
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  const [orders, setOrders] = useState([]);
 
   const loadOrders = async () => {
     const { data } = await supabase
@@ -20,27 +14,37 @@ export default function AdminOrdersPage() {
       .order('created_at', { ascending: false });
 
     setOrders(data || []);
-    setLoading(false);
   };
 
-  const updateStatus = async (id: string, status: string) => {
-    await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', id);
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const markAsShipped = async (orderId) => {
+    await fetch('/api/admin/ship-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId }),
+    });
 
     loadOrders();
   };
 
-  if (loading) return <p>Cargando pedidos...</p>;
+  const statusBg = (status) => {
+    if (status === 'processing') return '#FEF3C7';
+    if (status === 'shipped') return '#DCFCE7';
+    return '#E5E7EB';
+  };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Panel Admin · Pedidos</h1>
+    <div style={{ maxWidth: '900px', margin: '40px auto', padding: '0 16px' }}>
+      <h1 style={{ fontSize: '22px', marginBottom: '20px' }}>
+        Panel Admin · Pedidos
+      </h1>
 
-      <table border={1} cellPadding={8} style={{ marginTop: 20 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr>
+          <tr style={{ borderBottom: '1px solid #ddd', textAlign: 'left' }}>
             <th>ID</th>
             <th>Email</th>
             <th>Importe</th>
@@ -48,22 +52,61 @@ export default function AdminOrdersPage() {
             <th>Acción</th>
           </tr>
         </thead>
+
         <tbody>
-          {orders.map(order => (
-            <tr key={order.id}>
-              <td>{order.id.slice(0, 8)}</td>
+          {orders.map((order) => (
+            <tr key={order.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '8px 0' }}>
+                {order.id.slice(0, 6)}…
+              </td>
+
               <td>{order.email}</td>
-              <td>{order.amount} {order.currency}</td>
-              <td>{order.status}</td>
+
+              <td>
+                {order.amount} {order.currency}
+              </td>
+
+              <td>
+                <span
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    background: statusBg(order.status),
+                  }}
+                >
+                  {order.status}
+                </span>
+              </td>
+
               <td>
                 {order.status === 'processing' && (
-                  <button onClick={() => updateStatus(order.id, 'shipped')}>
+                  <button
+                    onClick={() => markAsShipped(order.id)}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#111827',
+                      color: '#ffffff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      border: 'none',
+                    }}
+                  >
                     Marcar enviado
                   </button>
                 )}
               </td>
             </tr>
           ))}
+
+          {orders.length === 0 && (
+            <tr>
+              <td colSpan={5} style={{ padding: '20px', textAlign: 'center' }}>
+                No hay pedidos
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
